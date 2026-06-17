@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Làm bài — Học từ vựng tiếng Nhật</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+    <a href="index.html" style="color:#aaa; text-decoration:none; font-size:1.2rem;">←</a>
+    <div style="flex:1;">
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
+      </div>
+    </div>
+    <div class="timer" id="timer-display" style="display:none;">⏱ 5:00</div>
+  </div>
+
+  <!-- QUESTION NUMBER -->
+  <div class="question-number" id="question-number">Câu 1 / 20</div>
+
+  <!-- NỘI DUNG BÀI (render động) -->
+  <div id="quiz-body"></div>
+
+  <!-- NÚT TIẾP THEO (ẩn cho đến khi trả lời) -->
+  <button class="btn btn-primary" id="btn-next" style="display:none; margin-top:16px;">
+    Câu tiếp theo →
+  </button>
+
+  <!-- MÀN HÌNH KẾT QUẢ (ẩn lúc đầu) -->
+  <div id="result-screen" style="display:none;">
+    <div class="card" style="text-align:center; padding:32px;">
+      <div style="font-size:3rem; margin-bottom:12px;" id="result-emoji">🎉</div>
+      <div style="font-size:1.8rem; font-weight:900; color:#c0392b;" id="result-score"></div>
+      <div style="color:#888; margin-top:4px; font-size:0.9rem;" id="result-label"></div>
+    </div>
+
+    <div id="result-review"></div>
+
+    <a href="index.html" class="btn btn-primary" style="margin-top:8px;">
+      ← Quay lại chọn bài
+    </a>
+  </div>
+
+</div>
+
+<script src="supabase.js"></script>
+<script src="quiz.js"></script>
+</body>
+</html>
