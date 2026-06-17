@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Học từ vựng tiếng Nhật</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="container">
+
+  <h1>🇯🇵 Học từ vựng</h1>
+  <p class="subtitle">Chọn bộ lọc → chọn dạng bài → bắt đầu</p>
+
+  <!-- BỘ LỌC: TRÌNH ĐỘ -->
+  <div class="card">
+    <div class="card-title">Trình độ</div>
+    <div class="chip-group" id="filter-level">
+      <button class="chip" data-value="N5">N5</button>
+      <button class="chip" data-value="N4">N4</button>
+      <button class="chip" data-value="N3">N3</button>
+      <button class="chip" data-value="N2">N2</button>
+      <button class="chip" data-value="N1">N1</button>
+    </div>
+  </div>
+
+  <!-- BỘ LỌC: CHỦ ĐỀ -->
+  <div class="card">
+    <div class="card-title">Chủ đề</div>
+    <div class="chip-group" id="filter-topic">
+      <!-- Sẽ render động từ data -->
+      <span style="color:#aaa; font-size:0.85rem;">Đang tải...</span>
+    </div>
+  </div>
+
+  <!-- BỘ LỌC: TỪ LOẠI -->
+  <div class="card">
+    <div class="card-title">Từ loại</div>
+    <div class="chip-group" id="filter-wordclass">
+      <button class="chip" data-value="Danh từ">Danh từ</button>
+      <button class="chip" data-value="Động từ nhóm 1">Động từ nhóm 1</button>
+      <button class="chip" data-value="Động từ nhóm 2">Động từ nhóm 2</button>
+      <button class="chip" data-value="Động từ nhóm 3 (Suru)">Động từ Suru</button>
+      <button class="chip" data-value="Tính từ đuôi i">Tính từ đuôi i</button>
+      <button class="chip" data-value="Tính từ đuôi na">Tính từ đuôi na</button>
+      <button class="chip" data-value="Phó từ">Phó từ</button>
+      <button class="chip" data-value="Thán từ">Thán từ</button>
+      <button class="chip" data-value="Liên từ">Liên từ</button>
+      <button class="chip" data-value="Trợ từ">Trợ từ</button>
+      <button class="chip" data-value="Cụm từ / Thành ngữ">Thành ngữ</button>
+    </div>
+  </div>
+
+  <!-- BỘ LỌC: KANJI -->
+  <div class="card">
+    <div class="card-title">Lọc theo Kanji <span style="font-weight:400; text-transform:none; font-size:0.75rem;">(chọn kanji → lọc từ vựng có chứa kanji đó)</span></div>
+    <div style="margin-bottom:10px;">
+      <input type="text" id="kanji-search" placeholder="Tìm kanji, âm Hán Việt hoặc nghĩa..."
+        style="width:100%; padding:8px 12px; border:2px solid #eee; border-radius:8px; font-size:0.85rem; outline:none;" />
+    </div>
+    <div class="chip-group" id="filter-kanji">
+      <span style="color:#aaa; font-size:0.85rem;">Đang tải...</span>
+    </div>
+  </div>
+
+  <!-- PREVIEW SỐ TỪ -->
+  <div class="preview-bar">
+    <div>
+      <div class="preview-count" id="preview-count">—</div>
+      <div class="preview-label">từ vựng phù hợp</div>
+    </div>
+    <div style="font-size:0.8rem; color:#aaa;" id="preview-note"></div>
+  </div>
+
+  <!-- CHỌN DẠNG BÀI -->
+  <div class="card">
+    <div class="card-title">Dạng bài</div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+
+      <button class="btn btn-outline quiz-start-btn" data-type="multiple" disabled>
+        📝 Trắc nghiệm <span style="font-weight:400; font-size:0.8rem;">— 20 câu, chọn đáp án đúng</span>
+      </button>
+
+      <button class="btn btn-outline quiz-start-btn" data-type="matching" disabled>
+        🔗 Nối từ <span style="font-weight:400; font-size:0.8rem;">— 4 lượt, mỗi lượt nối 5 cặp</span>
+      </button>
+
+      <button class="btn btn-outline quiz-start-btn" data-type="typing" disabled>
+        ⌨️ Gõ chữ <span style="font-weight:400; font-size:0.8rem;">— 20 câu, gõ câu trả lời</span>
+      </button>
+
+    </div>
+  </div>
+
+  <!-- TIMER OPTION -->
+  <div class="card" id="timer-card" style="display:none;">
+    <div class="card-title">Hẹn giờ</div>
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <label style="display:flex; align-items:center; gap:6px; font-size:0.9rem; cursor:pointer;">
+        <input type="checkbox" id="timer-toggle" style="width:16px; height:16px;" />
+        Bật hẹn giờ
+      </label>
+      <div id="timer-input-wrap" style="display:none; align-items:center; gap:8px;">
+        <input type="number" id="timer-minutes" value="5" min="1" max="60"
+          style="width:60px; padding:6px; border:2px solid #eee; border-radius:8px; font-size:0.9rem; text-align:center;" />
+        <span style="font-size:0.85rem; color:#888;">phút</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="supabase.js"></script>
+<script src="filter.js"></script>
+</body>
+</html>
