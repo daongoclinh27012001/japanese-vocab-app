@@ -85,3 +85,40 @@ async function fetchAllMeanings(vocabulary) {
   }
   return data;
 }
+
+// =============================================
+// HÀM FETCH TIẾN ĐỘ TÍCH LŨY THEO MÃ ĐỒNG BỘ
+// Trả về: mảng words nếu tìm thấy, null nếu chưa có mã này
+// =============================================
+async function fetchAccumulateProgress(syncCode) {
+  const { data, error } = await supabaseClient
+    .from('accumulate_progress')
+    .select('words')
+    .eq('sync_code', syncCode)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Lỗi fetch tiến độ tích lũy:', error);
+    return null;
+  }
+  return data ? data.words : null;
+}
+
+// =============================================
+// HÀM LƯU TIẾN ĐỘ TÍCH LŨY LÊN SUPABASE
+// Upsert: nếu mã chưa tồn tại thì tạo mới, có rồi thì cập nhật
+// =============================================
+async function saveAccumulateProgress(syncCode, words) {
+  const { error } = await supabaseClient
+    .from('accumulate_progress')
+    .upsert(
+      { sync_code: syncCode, words },
+      { onConflict: 'sync_code' }
+    );
+
+  if (error) {
+    console.error('Lỗi lưu tiến độ tích lũy:', error);
+    return false;
+  }
+  return true;
+}
