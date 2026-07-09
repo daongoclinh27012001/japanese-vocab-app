@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chế độ tích lũy — Học từ vựng tiếng Nhật</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="accumulate.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="container">
+
+  <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+    <a href="index.html" style="color:#aaa; text-decoration:none; font-size:1.2rem;">←</a>
+    <h1 style="margin-bottom:0;">📈 Chế độ tích lũy</h1>
+  </div>
+  <p class="subtitle">Học dần dần — mỗi lần tích lũy thêm 20 từ, ôn tập trên toàn bộ vốn từ đã có</p>
+
+  <!-- THANH TIẾN ĐỘ TÍCH LŨY -->
+  <div class="card">
+    <div class="card-title">Tiến độ tích lũy</div>
+    <div class="acc-progress-wrap">
+      <div class="acc-progress-fill" id="acc-progress-fill" style="width:0%"></div>
+    </div>
+    <div class="acc-progress-stats">
+      <span><strong id="acc-count">0</strong> / <span id="acc-total">—</span> từ</span>
+      <span id="acc-pct">0%</span>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" id="btn-add-more" style="margin-bottom:6px;">
+    🎯 Tích lũy thêm 20 từ
+  </button>
+  <div style="text-align:center; font-size:0.78rem; color:#aaa; min-height:16px; margin-bottom:16px;" id="sync-status"></div>
+
+  <!-- MÃ ĐỒNG BỘ ĐA THIẾT BỊ -->
+  <div class="card">
+    <div class="card-title">Đồng bộ đa thiết bị</div>
+    <p style="font-size:0.82rem; color:#888; margin-bottom:10px;">
+      Mã đồng bộ của bạn — nhập đúng mã này ở thiết bị khác để tiếp tục đúng tiến độ đã tích lũy.
+    </p>
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
+      <div id="sync-code-display" style="flex:1; font-family:monospace; font-size:1.1rem; font-weight:800; letter-spacing:0.05em; color:#c0392b; background:#fff8f8; border:2px solid #f5c6c6; border-radius:8px; padding:8px 12px; text-align:center;">—</div>
+      <button class="btn btn-outline" id="btn-copy-code" style="width:auto; margin-bottom:0; padding:8px 14px; font-size:0.82rem;">📋 Sao chép</button>
+    </div>
+
+    <p style="font-size:0.82rem; color:#888; margin-bottom:8px;">Đã có mã từ thiết bị khác? Nhập vào đây:</p>
+    <div style="display:flex; gap:8px;">
+      <input type="text" id="input-sync-code" placeholder="VD: K3F9-QX7A"
+        style="flex:1; padding:8px 12px; border:2px solid #eee; border-radius:8px; font-size:0.9rem; outline:none; font-family:monospace; text-transform:uppercase;" />
+      <button class="btn btn-outline" id="btn-use-code" style="width:auto; margin-bottom:0; padding:8px 14px; font-size:0.82rem;">Dùng mã này</button>
+    </div>
+  </div>
+
+  <!-- CHỌN DẠNG BÀI -->
+  <div class="card">
+    <div class="card-title">Ôn tập trên vốn từ đã tích lũy</div>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+
+      <button class="btn btn-outline quiz-start-btn" data-type="multiple" disabled>
+        📝 Trắc nghiệm <span style="font-weight:400; font-size:0.8rem;">— xáo trộn trong vốn từ hiện có</span>
+      </button>
+
+      <button class="btn btn-outline quiz-start-btn" data-type="matching" disabled>
+        🔗 Nối từ <span style="font-weight:400; font-size:0.8rem;">— xáo trộn trong vốn từ hiện có</span>
+      </button>
+
+      <button class="btn btn-outline quiz-start-btn" data-type="typing" disabled>
+        ⌨️ Gõ chữ <span style="font-weight:400; font-size:0.8rem;">— xáo trộn trong vốn từ hiện có</span>
+      </button>
+
+    </div>
+  </div>
+
+  <!-- TIMER OPTION -->
+  <div class="card">
+    <div class="card-title">Hẹn giờ</div>
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <label style="display:flex; align-items:center; gap:6px; font-size:0.9rem; cursor:pointer;">
+        <input type="checkbox" id="timer-toggle" style="width:16px; height:16px;" />
+        Bật hẹn giờ
+      </label>
+      <div id="timer-input-wrap" style="display:none; align-items:center; gap:8px;">
+        <input type="number" id="timer-minutes" value="5" min="1" max="60"
+          style="width:60px; padding:6px; border:2px solid #eee; border-radius:8px; font-size:0.9rem; text-align:center;" />
+        <span style="font-size:0.85rem; color:#888;">phút</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESET -->
+  <button class="btn btn-outline" id="btn-reset" style="border-color:#aaa; color:#aaa; margin-top:8px;">
+    🗑 Làm lại từ đầu (xóa tiến độ tích lũy)
+  </button>
+
+</div>
+
+<script src="supabase.js"></script>
+<script src="accumulate.js"></script>
+</body>
+</html>
