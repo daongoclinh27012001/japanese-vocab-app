@@ -5,13 +5,30 @@ const params = new URLSearchParams(window.location.search);
 const QUIZ_TYPE = params.get('type') || 'multiple';   // multiple | matching | typing
 const TIMER_SECONDS = parseInt(params.get('timer') || '0') * 60;
 
-// Data từ vựng đã lọc (sessionStorage set bởi filter.js)
+// Nếu đến từ chế độ tích lũy: source=accumulate&sync=<mã>
+// → cho phép đánh dấu "đã học thuộc" ngay trong lúc làm bài,
+//   và loại các từ đã học thuộc khỏi việc tạo câu hỏi.
+const SOURCE = params.get('source') || '';
+const SYNC_CODE = params.get('sync') || '';
+const IS_ACCUMULATE = SOURCE === 'accumulate' && !!SYNC_CODE;
+const BACK_URL = SOURCE === 'accumulate' ? 'accumulate.html' : 'index.html';
+
+// Data từ vựng đã lọc (sessionStorage set bởi filter.js hoặc accumulate.js)
 const rawData = JSON.parse(sessionStorage.getItem('filtered_vocab') || '[]');
 
-// Nếu không có data → quay về trang chủ
+// Toàn bộ danh sách từ đã tích lũy + đã học thuộc (chỉ có ý nghĩa khi IS_ACCUMULATE)
+// accumulatedWordsAll cần thiết để lưu lại đúng lên Supabase (upsert ghi đè toàn bộ mảng)
+const accumulatedWordsAll = IS_ACCUMULATE
+  ? JSON.parse(sessionStorage.getItem('accumulated_words') || '[]')
+  : [];
+let masteredWords = IS_ACCUMULATE
+  ? JSON.parse(sessionStorage.getItem('mastered_words') || '[]')
+  : [];
+
+// Nếu không có data → quay về trang chủ tương ứng
 if (rawData.length === 0) {
   alert('Không có dữ liệu từ vựng. Vui lòng chọn lại bộ lọc.');
-  window.location.href = 'index.html';
+  window.location.href = BACK_URL;
 }
 
 // =============================================
@@ -55,7 +72,13 @@ function deduplicateByWord(data) {
 }
 
 // Deduplicate toàn bộ data
-const uniqueWords = deduplicateByWord(rawData);
+const uniqueWordsAll = deduplicateByWord(rawData);
+
+// Nếu là chế độ tích lũy: loại các từ đã đánh dấu "học thuộc" khỏi
+// nguồn tạo câu hỏi (nhưng chúng vẫn được tính trong quỹ tích lũy ở accumulate.js)
+let uniqueWords = IS_ACCUMULATE
+  ? uniqueWordsAll.filter(w => !masteredWords.includes(w.vocabulary))
+  : uniqueWordsAll;
 
 // =============================================
 // TRẠNG THÁI BÀI THI
@@ -69,6 +92,44 @@ let timeLeft = TIMER_SECONDS;
 
 // Lưu lại lịch sử trả lời để show kết quả
 const history = [];      // [{question, userAnswer, correct, word}]
+
+// =============================================
+// ĐÁNH DẤU / BỎ ĐÁNH DẤU "ĐÃ HỌC THUỘC" NGAY TRONG LÚC LÀM BÀI
+// Chỉ hoạt động khi đến từ chế độ tích lũy (IS_ACCUMULATE)
+// =============================================
+async function toggleMastery(vocab, btn) {
+  if (!IS_ACCUMULATE) return;
+
+  const idx = masteredWords.indexOf(vocab);
+  const willBeMastered = idx === -1;
+
+  if (willBeMastered) masteredWords.push(vocab);
+  else masteredWords.splice(idx, 1);
+
+  sessionStorage.setItem('mastered_words', JSON.stringify(masteredWords));
+
+  if (btn) {
+    btn.classList.toggle('is-mastered', willBeMastered);
+    btn.textContent = willBeMastered
+      ? '✅ Đã đánh dấu học thuộc — bấm để bỏ'
+      : '🎓 Đánh dấu đã học thuộc';
+  }
+
+  const ok = await saveAccumulateProgress(SYNC_CODE, accumulatedWordsAll, masteredWords);
+  if (!ok) {
+    alert('Không thể lưu trạng thái học thuộc lên máy chủ. Vui lòng kiểm tra kết nối mạng.');
+  }
+}
+
+function masteryButtonHTML(vocab, small) {
+  if (!IS_ACCUMULATE) return '';
+  const isMastered = masteredWords.includes(vocab);
+  const cls = `btn-mastery${small ? ' btn-mastery-sm' : ''}${isMastered ? ' is-mastered' : ''}`;
+  const label = small
+    ? (isMastered ? '✅ Đã thuộc' : '🎓 Đánh dấu')
+    : (isMastered ? '✅ Đã đánh dấu học thuộc — bấm để bỏ' : '🎓 Đánh dấu đã học thuộc');
+  return `<button class="${cls}" data-word="${vocab}">${label}</button>`;
+}
 
 // =============================================
 // GENERATE CÂU HỎI
@@ -321,9 +382,35 @@ function setupMatchingLogic(q) {
         setTimeout(() => {
           document.getElementById('matching-feedback').textContent = '🎉 Hoàn thành lượt này!';
           document.getElementById('btn-next').style.display = 'block';
+          if (IS_ACCUMULATE) renderMatchingMastery(q.pairs);
         }, 400);
       }
     });
+  });
+}
+
+// Hiện danh sách các từ trong lượt vừa xong, cho phép đánh dấu "đã học thuộc"
+function renderMatchingMastery(pairs) {
+  const el = document.getElementById('explanation');
+  if (!el) return;
+
+  el.innerHTML = `
+    <div style="font-size:0.78rem; color:#888; margin-bottom:8px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">
+      Đánh dấu từ đã học thuộc
+    </div>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      ${pairs.map(p => `
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+          <span><strong style="color:#c0392b;">${p.jp}</strong> — ${p.vi}</span>
+          ${masteryButtonHTML(p.jp, true)}
+        </div>
+      `).join('')}
+    </div>
+  `;
+  el.classList.add('show');
+
+  el.querySelectorAll('.btn-mastery-sm').forEach(btn => {
+    btn.addEventListener('click', () => toggleMastery(btn.dataset.word, btn));
   });
 }
 
@@ -420,8 +507,14 @@ function showExplanation(word, allMeanings) {
       </span>
     </div>
     <div class="meaning-list">${meaningsHTML}</div>
+    ${masteryButtonHTML(word.vocabulary, false)}
   `;
   el.classList.add('show');
+
+  const masteryBtn = el.querySelector('.btn-mastery');
+  if (masteryBtn) {
+    masteryBtn.addEventListener('click', () => toggleMastery(word.vocabulary, masteryBtn));
+  }
 }
 
 // =============================================
@@ -518,11 +611,14 @@ function updateTimerDisplay() {
 // KHỞI ĐỘNG
 // =============================================
 function init() {
-  // Kiểm tra có đủ từ không
+  // Kiểm tra có đủ từ không (đã loại từ học thuộc nếu ở chế độ tích lũy)
   const minRequired = QUIZ_TYPE === 'multiple' ? 4 : 2;
   if (uniqueWords.length < minRequired) {
-    alert(`Cần ít nhất ${minRequired} từ khác nhau để tạo bài. Vui lòng chọn thêm bộ lọc.`);
-    window.location.href = 'index.html';
+    const extraHint = IS_ACCUMULATE
+      ? ' (đã trừ các từ đang đánh dấu "học thuộc") hoặc bỏ đánh dấu bớt từ đã thuộc'
+      : '';
+    alert(`Cần ít nhất ${minRequired} từ khác nhau để tạo bài${extraHint}. Vui lòng chọn thêm bộ lọc.`);
+    window.location.href = BACK_URL;
     return;
   }
 
@@ -530,7 +626,7 @@ function init() {
 
   if (questions.length === 0) {
     alert('Không thể tạo bài. Vui lòng thử lại.');
-    window.location.href = 'index.html';
+    window.location.href = BACK_URL;
     return;
   }
 
