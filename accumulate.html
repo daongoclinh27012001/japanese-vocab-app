@@ -25,6 +25,7 @@
     </div>
     <div class="acc-progress-stats">
       <span><strong id="acc-count">0</strong> / <span id="acc-total">—</span> từ</span>
+      <span>🎓 <strong id="acc-mastered">0</strong> đã thuộc</span>
       <span id="acc-pct">0%</span>
     </div>
   </div>
@@ -53,9 +54,18 @@
     </div>
   </div>
 
+  <!-- TỪ ĐÃ HỌC THUỘC -->
+  <div class="card" id="mastered-card" style="display:none;">
+    <div class="card-title">Từ đã học thuộc (<span id="mastered-count">0</span>) — bấm để bỏ đánh dấu</div>
+    <div class="chip-group" id="mastered-list"></div>
+  </div>
+
   <!-- CHỌN DẠNG BÀI -->
   <div class="card">
     <div class="card-title">Ôn tập trên vốn từ đã tích lũy</div>
+    <p id="mastery-hint" style="display:none; font-size:0.78rem; color:#e67e22; margin-bottom:10px;">
+      ⚠️ Không đủ từ <strong>chưa học thuộc</strong> để tạo bài (cần tối thiểu 4). Hãy tích lũy thêm hoặc bỏ đánh dấu bớt từ đã thuộc ở trên.
+    </p>
     <div style="display:flex; flex-direction:column; gap:10px;">
 
       <button class="btn btn-outline quiz-start-btn" data-type="multiple" disabled>
