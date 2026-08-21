@@ -88,12 +88,12 @@ async function fetchAllMeanings(vocabulary) {
 
 // =============================================
 // HÀM FETCH TIẾN ĐỘ TÍCH LŨY THEO MÃ ĐỒNG BỘ
-// Trả về: mảng words nếu tìm thấy, null nếu chưa có mã này
+// Trả về: { words, masteredWords } nếu tìm thấy, null nếu chưa có mã này
 // =============================================
 async function fetchAccumulateProgress(syncCode) {
   const { data, error } = await supabaseClient
     .from('accumulate_progress')
-    .select('words')
+    .select('words, mastered_words')
     .eq('sync_code', syncCode)
     .maybeSingle();
 
@@ -101,18 +101,26 @@ async function fetchAccumulateProgress(syncCode) {
     console.error('Lỗi fetch tiến độ tích lũy:', error);
     return null;
   }
-  return data ? data.words : null;
+  if (!data) return null;
+
+  return {
+    words: data.words || [],
+    masteredWords: data.mastered_words || [],
+  };
 }
 
 // =============================================
 // HÀM LƯU TIẾN ĐỘ TÍCH LŨY LÊN SUPABASE
 // Upsert: nếu mã chưa tồn tại thì tạo mới, có rồi thì cập nhật
+// words: toàn bộ từ đã tích lũy
+// masteredWords: tập con của words đã được đánh dấu "học thuộc"
+//                (vẫn tính vào quỹ tích lũy, nhưng không lặp lại trong câu hỏi)
 // =============================================
-async function saveAccumulateProgress(syncCode, words) {
+async function saveAccumulateProgress(syncCode, words, masteredWords = []) {
   const { error } = await supabaseClient
     .from('accumulate_progress')
     .upsert(
-      { sync_code: syncCode, words },
+      { sync_code: syncCode, words, mastered_words: masteredWords },
       { onConflict: 'sync_code' }
     );
 
