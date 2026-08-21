@@ -16,7 +16,9 @@
 
 .acc-progress-stats {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
+  gap: 6px 12px;
   font-size: 0.85rem;
   color: #888;
   font-weight: 600;
