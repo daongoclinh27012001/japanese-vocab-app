@@ -19,7 +19,13 @@
 
   <!-- THANH TIẾN ĐỘ TÍCH LŨY -->
   <div class="card">
-    <div class="card-title">Tiến độ tích lũy</div>
+    <div class="card-title" style="display:flex; align-items:center; justify-content:space-between;">
+      <span>Tiến độ tích lũy</span>
+      <button id="btn-refresh-total" title="Làm mới tổng số từ trong kho từ vựng"
+        style="border:none; background:none; color:#c0392b; font-size:0.85rem; cursor:pointer; font-weight:700; padding:2px 4px; text-transform:none; letter-spacing:normal;">
+        🔄 Làm mới
+      </button>
+    </div>
     <div class="acc-progress-wrap">
       <div class="acc-progress-fill" id="acc-progress-fill" style="width:0%"></div>
     </div>
@@ -54,10 +60,13 @@
     </div>
   </div>
 
-  <!-- TỪ ĐÃ HỌC THUỘC -->
+  <!-- TỪ ĐÃ HỌC THUỘC (thu gọn mặc định, bấm tiêu đề để mở/đóng) -->
   <div class="card" id="mastered-card" style="display:none;">
-    <div class="card-title">Từ đã học thuộc (<span id="mastered-count">0</span>) — bấm để bỏ đánh dấu</div>
-    <div class="chip-group" id="mastered-list"></div>
+    <div class="card-title" id="mastered-toggle" style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin-bottom:0;">
+      <span>Từ đã học thuộc (<span id="mastered-count">0</span>)</span>
+      <span id="mastered-caret" style="font-size:0.9rem;">▾</span>
+    </div>
+    <div class="chip-group" id="mastered-list" style="display:none; margin-top:12px;"></div>
   </div>
 
   <!-- CHỌN DẠNG BÀI -->
