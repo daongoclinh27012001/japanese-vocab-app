@@ -87,6 +87,36 @@ async function fetchAllMeanings(vocabulary) {
 }
 
 // =============================================
+// SỬA / XÓA MỘT NGHĨA CỦA TỪ (dùng trong lúc xem giải thích sau khi trả lời)
+// Thao tác trực tiếp trên bảng "vocabulary", theo id của dòng (mỗi dòng = 1 nghĩa)
+// =============================================
+async function updateVocabularyMeaning(id, newMeaning) {
+  const { error } = await supabaseClient
+    .from('vocabulary')
+    .update({ meaning: newMeaning })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Lỗi cập nhật nghĩa:', error);
+    return false;
+  }
+  return true;
+}
+
+async function deleteVocabularyMeaning(id) {
+  const { error } = await supabaseClient
+    .from('vocabulary')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Lỗi xóa nghĩa:', error);
+    return false;
+  }
+  return true;
+}
+
+// =============================================
 // HÀM FETCH TIẾN ĐỘ TÍCH LŨY THEO MÃ ĐỒNG BỘ
 // Trả về: { words, masteredWords } nếu tìm thấy, null nếu chưa có mã này
 // =============================================
