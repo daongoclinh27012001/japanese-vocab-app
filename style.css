@@ -249,3 +249,39 @@ h1 {
   font-size: 0.75rem;
   white-space: nowrap;
 }
+
+/* SỬA / XÓA NGHĨA (trong phần giải thích lúc làm bài) */
+.meaning-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.meaning-action-btn {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.meaning-action-btn:hover { color: #c0392b; }
+
+.btn-save-meaning { color: #27ae60; }
+.btn-save-meaning:hover { color: #1e8449; }
+
+.meaning-edit-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 2px solid #eee;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: #333;
+  resize: vertical;
+  outline: none;
+}
+
+.meaning-edit-input:focus { border-color: #c0392b; }
