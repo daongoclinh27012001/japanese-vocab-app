@@ -13,6 +13,16 @@ const SYNC_CODE = params.get('sync') || '';
 const IS_ACCUMULATE = SOURCE === 'accumulate' && !!SYNC_CODE;
 const BACK_URL = SOURCE === 'accumulate' ? 'accumulate.html' : 'index.html';
 
+// Cập nhật các nút "quay lại" (header + màn hình kết quả) theo đúng nguồn
+const backHeaderLink = document.getElementById('btn-back-header');
+if (backHeaderLink) backHeaderLink.href = BACK_URL;
+
+const backResultLink = document.getElementById('btn-back-result');
+if (backResultLink) {
+  backResultLink.href = BACK_URL;
+  backResultLink.textContent = IS_ACCUMULATE ? '← Quay lại Chế độ tích lũy' : '← Quay lại chọn bài';
+}
+
 // Data từ vựng đã lọc (sessionStorage set bởi filter.js hoặc accumulate.js)
 const rawData = JSON.parse(sessionStorage.getItem('filtered_vocab') || '[]');
 
@@ -482,23 +492,13 @@ function handleTypingSubmit(q) {
 
 // =============================================
 // HIỂN THỊ GIẢI THÍCH (từ điển mini)
+// + Cho phép SỬA / XÓA từng nghĩa ngay tại đây
 // =============================================
 function showExplanation(word, allMeanings) {
   const el = document.getElementById('explanation');
   if (!el) return;
 
-  const meaningsHTML = allMeanings.map((m, i) => `
-    <div class="meaning-item">
-      <strong>${i + 1}. ${m.meaning}</strong>
-      <span style="color:#aaa; font-size:0.78rem; margin-left:6px;">${m.word_classes || ''}</span>
-      ${m.example ? `
-        <div class="example" style="margin-top:2px;">
-          ${m.example}<br/>
-          <span style="color:#999;">${m.example_translation_vi || ''}</span><br/>
-          <span style="color:#bbb; font-size:0.78rem;">${m.example_translation_en || ''}</span>
-        </div>` : ''}
-    </div>
-  `).join('');
+  const meaningsHTML = allMeanings.map((m, i) => renderMeaningItemHTML(m, i, allMeanings.length)).join('');
 
   el.innerHTML = `
     <div class="jp-word">${word.vocabulary}
@@ -506,7 +506,7 @@ function showExplanation(word, allMeanings) {
         ${word.pronunciation || ''}
       </span>
     </div>
-    <div class="meaning-list">${meaningsHTML}</div>
+    <div class="meaning-list" id="meaning-list">${meaningsHTML}</div>
     ${masteryButtonHTML(word.vocabulary, false)}
   `;
   el.classList.add('show');
@@ -515,6 +515,115 @@ function showExplanation(word, allMeanings) {
   if (masteryBtn) {
     masteryBtn.addEventListener('click', () => toggleMastery(word.vocabulary, masteryBtn));
   }
+
+  attachMeaningActionListeners(word, allMeanings);
+}
+
+// Render 1 dòng nghĩa (chế độ xem)
+function renderMeaningItemHTML(m, i, totalCount) {
+  const canManage = m.id !== undefined && m.id !== null;
+  return `
+    <div class="meaning-item" data-meaning-id="${m.id}">
+      <strong>${i + 1}. ${m.meaning}</strong>
+      <span style="color:#aaa; font-size:0.78rem; margin-left:6px;">${m.word_classes || ''}</span>
+      ${m.example ? `
+        <div class="example" style="margin-top:2px;">
+          ${m.example}<br/>
+          <span style="color:#999;">${m.example_translation_vi || ''}</span><br/>
+          <span style="color:#bbb; font-size:0.78rem;">${m.example_translation_en || ''}</span>
+        </div>` : ''}
+      ${canManage ? `
+        <div class="meaning-actions">
+          <button class="meaning-action-btn btn-edit-meaning" data-id="${m.id}">✏️ Sửa nghĩa</button>
+          ${totalCount > 1 ? `<button class="meaning-action-btn btn-delete-meaning" data-id="${m.id}">🗑 Xóa nghĩa này</button>` : ''}
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+// Gắn sự kiện Sửa / Xóa cho các dòng nghĩa vừa render
+function attachMeaningActionListeners(word, allMeanings) {
+  const el = document.getElementById('explanation');
+  if (!el) return;
+
+  el.querySelectorAll('.btn-edit-meaning').forEach(btn => {
+    btn.addEventListener('click', () => startEditMeaning(btn.dataset.id, word, allMeanings));
+  });
+  el.querySelectorAll('.btn-delete-meaning').forEach(btn => {
+    btn.addEventListener('click', () => handleDeleteMeaning(btn.dataset.id, word, allMeanings));
+  });
+}
+
+// Chuyển 1 dòng nghĩa sang chế độ chỉnh sửa (textarea + Lưu/Hủy)
+function startEditMeaning(id, word, allMeanings) {
+  const m = allMeanings.find(x => String(x.id) === String(id));
+  if (!m) return;
+
+  const container = document.querySelector(`.meaning-item[data-meaning-id="${id}"]`);
+  if (!container) return;
+
+  container.innerHTML = `
+    <textarea class="meaning-edit-input" rows="2">${m.meaning}</textarea>
+    <div class="meaning-actions">
+      <button class="meaning-action-btn btn-save-meaning" data-id="${id}">💾 Lưu</button>
+      <button class="meaning-action-btn btn-cancel-meaning" data-id="${id}">Hủy</button>
+    </div>
+  `;
+
+  const textarea = container.querySelector('.meaning-edit-input');
+  textarea.focus();
+
+  container.querySelector('.btn-save-meaning').addEventListener('click', () => saveEditMeaning(id, word, allMeanings));
+  container.querySelector('.btn-cancel-meaning').addEventListener('click', () => showExplanation(word, allMeanings));
+}
+
+// Lưu nghĩa đã sửa lên Supabase, cập nhật lại giao diện
+async function saveEditMeaning(id, word, allMeanings) {
+  const container = document.querySelector(`.meaning-item[data-meaning-id="${id}"]`);
+  if (!container) return;
+  const textarea = container.querySelector('.meaning-edit-input');
+  const newMeaning = textarea.value.trim();
+
+  if (!newMeaning) {
+    alert('Nghĩa không được để trống.');
+    return;
+  }
+
+  const saveBtn = container.querySelector('.btn-save-meaning');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Đang lưu...'; }
+
+  const ok = await updateVocabularyMeaning(id, newMeaning);
+
+  if (!ok) {
+    alert('Không thể lưu thay đổi lên máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.');
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Lưu'; }
+    return;
+  }
+
+  const m = allMeanings.find(x => String(x.id) === String(id));
+  if (m) m.meaning = newMeaning;
+
+  showExplanation(word, allMeanings);
+}
+
+// Xóa hẳn 1 nghĩa khỏi Supabase (chỉ cho phép khi từ còn > 1 nghĩa)
+async function handleDeleteMeaning(id, word, allMeanings) {
+  if (allMeanings.length <= 1) return;
+
+  const confirmed = confirm('Xóa nghĩa này khỏi từ điển? Hành động này không thể hoàn tác.');
+  if (!confirmed) return;
+
+  const ok = await deleteVocabularyMeaning(id);
+  if (!ok) {
+    alert('Không thể xóa nghĩa này. Vui lòng kiểm tra kết nối mạng và thử lại.');
+    return;
+  }
+
+  const idx = allMeanings.findIndex(x => String(x.id) === String(id));
+  if (idx !== -1) allMeanings.splice(idx, 1);
+
+  showExplanation(word, allMeanings);
 }
 
 // =============================================
