@@ -11,6 +11,12 @@
 // - Vẫn tính vào quỹ tích lũy (số đếm, %).
 // - Nhưng sẽ KHÔNG xuất hiện trong các bài quiz nữa,
 //   trừ khi được bỏ đánh dấu.
+//
+// "Tổng số từ" (acc-total) = số từ tiếng Nhật DUY NHẤT hiện có
+// trong bảng "vocabulary" trên Supabase, được lấy mỗi lần tải
+// trang này. Nút 🔄 Làm mới cho phép lấy lại con số này ngay
+// mà không cần tải lại cả trang (hữu ích nếu vừa thêm từ mới
+// vào DB trong lúc đang mở trang).
 // =============================================
 
 const SYNC_CODE_KEY = 'jp_accumulate_sync_code'; // localStorage: chỉ lưu MÃ, không lưu tiến độ
@@ -22,6 +28,7 @@ let uniqueAllWords = [];   // danh sách unique các từ (giá trị cột voca
 let accumulatedWords = []; // danh sách các từ đã tích lũy (nguồn thật nằm trên Supabase)
 let masteredWords = [];    // tập con của accumulatedWords đã đánh dấu "học thuộc"
 let syncCode = '';         // mã đồng bộ hiện tại
+let mastListExpanded = false; // trạng thái mở/đóng danh sách "từ đã học thuộc"
 
 // =============================================
 // UTILS
@@ -77,6 +84,27 @@ async function saveProgressToCloud() {
     alert('Không thể lưu tiến độ lên máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.');
   }
   return ok;
+}
+
+// =============================================
+// LÀM MỚI TỔNG SỐ TỪ TRONG KHO TỪ VỰNG (không cần tải lại trang)
+// =============================================
+async function refreshVocabTotals() {
+  const btn = document.getElementById('btn-refresh-total');
+  if (btn) { btn.disabled = true; btn.textContent = '🔄 Đang làm mới...'; }
+
+  try {
+    allVocabData = await fetchVocabulary({}); // lấy lại toàn bộ, không lọc
+    uniqueAllWords = [...new Set(allVocabData.map(r => r.vocabulary).filter(Boolean))];
+
+    // Loại các từ không còn tồn tại trong DB (VD: bị xóa) khỏi tiến độ hiện tại
+    accumulatedWords = accumulatedWords.filter(w => uniqueAllWords.includes(w));
+    masteredWords = masteredWords.filter(w => accumulatedWords.includes(w));
+
+    renderProgress();
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Làm mới'; }
+  }
 }
 
 // =============================================
@@ -160,11 +188,12 @@ function renderProgress() {
 }
 
 // =============================================
-// RENDER DANH SÁCH TỪ ĐÃ HỌC THUỘC (bấm để bỏ đánh dấu)
+// RENDER DANH SÁCH TỪ ĐÃ HỌC THUỘC (thu gọn mặc định, bấm tiêu đề để mở/đóng)
 // =============================================
 function renderMasteredList() {
   const card = document.getElementById('mastered-card');
   const list = document.getElementById('mastered-list');
+  const caret = document.getElementById('mastered-caret');
   if (!card || !list) return;
 
   document.getElementById('mastered-count').textContent = masteredWords.length;
@@ -176,13 +205,22 @@ function renderMasteredList() {
   }
 
   card.style.display = 'block';
-  list.innerHTML = masteredWords.map(w =>
-    `<button class="chip active" data-value="${w}" title="Bấm để bỏ đánh dấu học thuộc">${w}</button>`
-  ).join('');
+  list.style.display = mastListExpanded ? 'flex' : 'none';
+  if (caret) caret.textContent = mastListExpanded ? '▴' : '▾';
 
-  list.querySelectorAll('.chip').forEach(chip => {
-    chip.addEventListener('click', () => unmarkMastered(chip.dataset.value));
-  });
+  // Chỉ cần render nội dung chip khi đang mở, đỡ tốn công lúc đóng
+  if (mastListExpanded) {
+    list.innerHTML = masteredWords.map(w =>
+      `<button class="chip active" data-value="${w}" title="Bấm để bỏ đánh dấu học thuộc">${w}</button>`
+    ).join('');
+
+    list.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', (e) => {
+        e.stopPropagation();
+        unmarkMastered(chip.dataset.value);
+      });
+    });
+  }
 }
 
 // =============================================
@@ -200,6 +238,7 @@ function startQuiz(type) {
   // source=accumulate + sync=<mã> để quiz.js biết:
   // 1) loại trừ từ đã học thuộc khỏi câu hỏi
   // 2) cho phép đánh dấu "học thuộc" ngay trong lúc làm bài, và lưu lên Supabase
+  // 3) sau khi làm xong, quay lại đúng trang tích lũy (không phải trang chủ)
   const params = new URLSearchParams({
     type,
     timer: timerOn ? timerMin : 0,
@@ -239,6 +278,12 @@ async function switchToSyncCode(newCode) {
 // =============================================
 function setupEventListeners() {
   document.getElementById('btn-add-more').addEventListener('click', addMoreWords);
+  document.getElementById('btn-refresh-total').addEventListener('click', refreshVocabTotals);
+
+  document.getElementById('mastered-toggle').addEventListener('click', () => {
+    mastListExpanded = !mastListExpanded;
+    renderMasteredList();
+  });
 
   document.getElementById('btn-reset').addEventListener('click', async () => {
     const confirmed = confirm(
