@@ -13,39 +13,54 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // Trả về mảng các từ phù hợp với điều kiện lọc
 // =============================================
 async function fetchVocabulary(filters = {}) {
-  let query = supabaseClient.from('vocabulary').select('*');
+  // Supabase REST API mặc định giới hạn 1000 dòng / request.
+  // Nếu bảng "vocabulary" vượt quá 1000 dòng, cần phân trang (range)
+  // để lấy được TOÀN BỘ dữ liệu, tránh bị cắt bớt âm thầm.
+  const PAGE_SIZE = 1000;
+  let allRows = [];
+  let from = 0;
 
-  // Lọc theo level
-  if (filters.level && filters.level.length > 0) {
-    query = query.in('level', filters.level);
-  }
+  while (true) {
+    let query = supabaseClient.from('vocabulary').select('*').range(from, from + PAGE_SIZE - 1);
 
-  // Lọc theo topic
-  if (filters.topic && filters.topic.length > 0) {
-    query = query.in('topic', filters.topic);
-  }
+    // Lọc theo level
+    if (filters.level && filters.level.length > 0) {
+      query = query.in('level', filters.level);
+    }
 
-  // Lọc theo kanji: kiểm tra vocabulary có chứa ký tự kanji không
-  // Nếu chọn nhiều kanji, lấy union (OR)
-  if (filters.kanji && filters.kanji.length > 0) {
-    const kanjiConditions = filters.kanji
-      .map(k => `vocabulary.ilike.%${k}%`)
-      .join(',');
-    query = query.or(kanjiConditions);
-  }
+    // Lọc theo topic
+    if (filters.topic && filters.topic.length > 0) {
+      query = query.in('topic', filters.topic);
+    }
 
-  const { data, error } = await query;
+    // Lọc theo kanji: kiểm tra vocabulary có chứa ký tự kanji không
+    // Nếu chọn nhiều kanji, lấy union (OR)
+    if (filters.kanji && filters.kanji.length > 0) {
+      const kanjiConditions = filters.kanji
+        .map(k => `vocabulary.ilike.%${k}%`)
+        .join(',');
+      query = query.or(kanjiConditions);
+    }
 
-  if (error) {
-    console.error('Lỗi fetch vocabulary:', error);
-    return [];
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Lỗi fetch vocabulary:', error);
+      return allRows; // trả về những gì đã lấy được thay vì mất trắng
+    }
+
+    allRows = allRows.concat(data);
+
+    // Hết dữ liệu (trang trả về ít hơn PAGE_SIZE) → dừng vòng lặp
+    if (data.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
   }
 
   // Lọc theo word_classes (substring search, chạy phía client)
   // Vì cột word_classes chứa chuỗi ghép như "Danh từ, Động từ nhóm 3 (Suru)"
-  let result = data;
+  let result = allRows;
   if (filters.wordClass && filters.wordClass.length > 0) {
-    result = data.filter(row =>
+    result = allRows.filter(row =>
       filters.wordClass.some(wc => row.word_classes && row.word_classes.includes(wc))
     );
   }
