@@ -6,7 +6,15 @@
 const SUPABASE_URL = 'https://oklnvaeoydcsoctsvgam.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rbG52YWVveWRjc29jdHN2Z2FtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1OTc5MDcsImV4cCI6MjA5NzE3MzkwN30.hUxKNOkEepp7y92TQAqXgqwxOwPfWtOsOW6ARt-a1gs';
 
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  global: {
+    // Ép mọi request tới Supabase bỏ qua cache của trình duyệt.
+    // Nếu không có dòng này, có thiết bị/trình duyệt sẽ tiếp tục
+    // hiển thị dữ liệu cũ (vd: tổng số từ) dù dữ liệu trên server
+    // đã thay đổi, cho tới khi hard-reload (Ctrl+Shift+R).
+    fetch: (url, options = {}) => fetch(url, { ...options, cache: 'no-store' }),
+  },
+});
 
 // =============================================
 // HÀM FETCH TỪ VỰNG THEO BỘ LỌC
